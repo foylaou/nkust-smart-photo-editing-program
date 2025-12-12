@@ -34,7 +34,7 @@ class IPCServer:
             sys.stderr.flush()
             raise
 
-    def _image_to_base64(self, img: Image.Image, format: str = "PNG", quality: int = 75) -> str:
+    def _image_to_base64(self, img: Image.Image, format: str = "PNG", quality: int = 40) -> str:
         """將 PIL Image 轉換為 Base64 字串"""
         buffer = BytesIO()
 
@@ -62,6 +62,17 @@ class IPCServer:
         sys.stderr.write(f"Base64 編碼大小: {base64_size / 1024:.1f} KB\n")
         sys.stderr.flush()
 
+        # 如果編碼後仍太大（超過 50KB），進一步降低品質
+        max_size_kb = 50
+        attempt_quality = quality
+        while base64_size > max_size_kb * 1024 and attempt_quality > 10:
+            buffer = BytesIO()
+            attempt_quality -= 10
+            save_img.save(buffer, format=save_format, quality=attempt_quality, optimize=True)
+            base64_size = len(buffer.getvalue())
+            sys.stderr.write(f"圖片仍太大，降低品質至 {attempt_quality}，大小: {base64_size / 1024:.1f} KB\n")
+            sys.stderr.flush()
+
         return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
     def _base64_to_image(self, base64_str: str) -> Image.Image:
@@ -78,14 +89,14 @@ class IPCServer:
             "format": img.format or "Unknown"
         }
 
-    def _create_preview(self, img: Image.Image, max_size: int = 1024) -> Image.Image:
+    def _create_preview(self, img: Image.Image, max_size: int = 512) -> Image.Image:
         """
         為大圖片創建預覽
         如果圖片任一邊超過 max_size，則縮小至適當大小
 
         Args:
             img: 原始圖片
-            max_size: 最大尺寸（寬或高），默認 1024px（減小以避免 IPC 傳輸問題）
+            max_size: 最大尺寸（寬或高），默認 512px（減小以避免 IPC 傳輸問題）
 
         Returns:
             預覽圖片

@@ -11,6 +11,7 @@ export default function ImageEditor() {
   const [imageInfo, setImageInfo] = useState<ImageInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'transform' | 'color' | 'effects'>('transform');
+  const [cropMode, setCropMode] = useState(false);
 
   const handleFileSelect = async (file: File | any) => {
     setLoading(true);
@@ -142,6 +143,11 @@ export default function ImageEditor() {
     console.log('✓ 圖片已清除');
   };
 
+  const handleCropConfirm = (left: number, top: number, right: number, bottom: number) => {
+    processImage(() => window.imageAPI.crop(left, top, right, bottom));
+    setCropMode(false);
+  };
+
   return (
     <div className="h-screen flex bg-[#36393f]">
       <div className="w-80 bg-[#2b2d31] border-r border-[#1e1f22] overflow-y-auto">
@@ -197,7 +203,10 @@ export default function ImageEditor() {
                 onFlip={(direction) => processImage(() => window.imageAPI.flip(direction))}
                 onResize={(w, h, keep) => processImage(() => window.imageAPI.resize(w, h, keep))}
                 onCropCenter={(w, h) => processImage(() => window.imageAPI.cropCenter(w, h))}
+                onCropMode={() => setCropMode(true)}
                 hasImage={!!imageData}
+                imageInfo={imageInfo}
+                cropMode={cropMode}
               />
             )}
 
@@ -240,6 +249,9 @@ export default function ImageEditor() {
           imageInfo={imageInfo}
           onFileSelect={handleFileSelect}
           loading={loading}
+          cropMode={cropMode}
+          onCropCancel={() => setCropMode(false)}
+          onCropConfirm={handleCropConfirm}
         />
       </div>
     </div>

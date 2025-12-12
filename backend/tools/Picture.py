@@ -63,12 +63,27 @@ class Picture:
         img = self._ensure_image()
 
         if keep_aspect:
-            img.thumbnail(new_size, Image.Resampling.LANCZOS)
-            result = img.copy()
+            # 保持比例：計算適合目標尺寸的新尺寸
+            target_width, target_height = new_size
+            original_width, original_height = img.size
+
+            # 計算寬度和高度的縮放比例
+            width_ratio = target_width / original_width
+            height_ratio = target_height / original_height
+
+            # 使用較小的比例以確保圖片能完全適合目標尺寸
+            scale = min(width_ratio, height_ratio)
+
+            # 計算新的尺寸
+            new_width = int(original_width * scale)
+            new_height = int(original_height * scale)
+
+            result = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            print(f"✓ 調整尺寸完成 (保持比例): {result.size[0]} x {result.size[1]}")
         else:
             result = img.resize(new_size, Image.Resampling.LANCZOS)
+            print(f"✓ 調整尺寸完成: {result.size[0]} x {result.size[1]}")
 
-        print(f"✓ 調整尺寸完成: {result.size[0]} x {result.size[1]}")
         return result
 
     # ========== 3. 旋轉圖 (Rotate) ==========

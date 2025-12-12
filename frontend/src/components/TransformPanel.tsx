@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RotateCw, FlipHorizontal, FlipVertical, Crop, Maximize } from 'lucide-react';
+import type { ImageInfo } from '../types/electron';
 
 interface TransformPanelProps {
   onRotate: (angle: number) => void;
   onFlip: (direction: 'horizontal' | 'vertical') => void;
   onResize: (width: number, height: number, keepAspect: boolean) => void;
   onCropCenter: (width: number, height: number) => void;
+  onCropMode: () => void;
   hasImage: boolean;
+  imageInfo: ImageInfo | null;
+  cropMode: boolean;
 }
 
 export default function TransformPanel({
@@ -14,7 +18,10 @@ export default function TransformPanel({
   onFlip,
   onResize,
   onCropCenter,
-  hasImage
+  onCropMode,
+  hasImage,
+  imageInfo,
+  cropMode
 }: TransformPanelProps) {
   const [angle, setAngle] = useState(90);
   const [resizeWidth, setResizeWidth] = useState(800);
@@ -22,6 +29,18 @@ export default function TransformPanel({
   const [keepAspect, setKeepAspect] = useState(true);
   const [cropWidth, setCropWidth] = useState(500);
   const [cropHeight, setCropHeight] = useState(500);
+
+  // 當圖片載入時，自動更新尺寸為圖片的實際尺寸
+  useEffect(() => {
+    if (imageInfo) {
+      setResizeWidth(imageInfo.width);
+      setResizeHeight(imageInfo.height);
+      // 也更新裁切尺寸為圖片尺寸的一半（或更小）
+      const defaultCropSize = Math.min(Math.min(imageInfo.width, imageInfo.height), 500);
+      setCropWidth(defaultCropSize);
+      setCropHeight(defaultCropSize);
+    }
+  }, [imageInfo]);
 
   return (
     <div className="p-4 space-y-6">
@@ -177,6 +196,24 @@ export default function TransformPanel({
             <Maximize size={16} />
             <span>應用調整</span>
           </button>
+        </div>
+
+        {/* 自由裁切 */}
+        <div className="space-y-2">
+          <label className="text-xs text-gray-400">自由裁切</label>
+          <button
+            onClick={onCropMode}
+            disabled={!hasImage || cropMode}
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-[#3d4046] hover:bg-[#4a4d54] disabled:bg-[#2b2d31] disabled:text-gray-600 text-white rounded text-sm transition-colors"
+          >
+            <Crop size={16} />
+            <span>{cropMode ? '裁切模式已啟動' : '用滑鼠拖拽選擇區域'}</span>
+          </button>
+          {cropMode && (
+            <p className="text-xs text-[#5865f2] text-center">
+              在圖片預覽區拖拽滑鼠選擇裁切範圍
+            </p>
+          )}
         </div>
 
         {/* 中心裁切 */}
