@@ -72,76 +72,71 @@ function findPython(backendDir: string): string {
 
 // Python Backend Management
 function startPythonBackend() {
-    // In dev mode: dist-electron -> frontend -> nkust-calculater -> backend
-    const backendDir = isDev
-        ? path.join(__dirname, '..', '..', 'backend')
-        : path.join(process.resourcesPath, 'backend');
+    if (isDev) {
+        // --- DEVELOPMENT MODE ---
+        const backendDir = path.join(__dirname, '..', '..', 'backend');
+        const backendPath = path.join(backendDir, 'ipc_server.py');
+        console.log('Starting Python backend in DEV mode:', backendPath);
 
-    const backendPath = path.join(backendDir, 'ipc_server.py');
+        if (!existsSync(backendPath)) {
+            console.error('Backend script not found at:', backendPath);
+            return;
+        }
 
-    console.log('Starting Python backend:', backendPath);
-    console.log('Current directory:', __dirname);
-    console.log('Backend exists:', existsSync(backendPath));
+        const pythonExecutable = findPython(backendDir);
+        console.log(`Using Python interpreter: ${pythonExecutable}`);
 
-    if (!existsSync(backendPath)) {
-        console.error('Backend file not found at:', backendPath);
-        console.error('Please check the path and try again');
+        pythonProcess = spawn(pythonExecutable, [backendPath], {
+            stdio: ['pipe', 'pipe', 'pipe'],
+            cwd: backendDir,
+        });
+    } else {
+        // --- PRODUCTION MODE ---
+        const backendName = process.platform === 'win32' ? 'ipc_server.exe' : 'ipc_server';
+        const backendPath = path.join(process.resourcesPath, 'backend', backendName);
+        console.log('Starting Python backend in PROD mode:', backendPath);
+
+        if (!existsSync(backendPath)) {
+            console.error('Packaged backend executable not found at:', backendPath);
+            return;
+        }
+        
+        // In production, the backend is a self-contained executable
+        pythonProcess = spawn(backendPath, [], {
+            stdio: ['pipe', 'pipe', 'pipe'],
+        });
+    }
+
+    // --- COMMON PROCESS HANDLING ---
+    if (!pythonProcess) {
+        console.error('Failed to spawn backend process.');
         return;
     }
 
-    const pythonPath = findPython(backendDir);
+    console.log('Backend process spawned with PID:', pythonProcess.pid);
 
-    try {
-        pythonProcess = spawn(pythonPath, [backendPath], {
-            stdio: ['pipe', 'pipe', 'pipe'],
-            env: { ...process.env },
-            cwd: backendDir
-        });
+    setupPythonResponseHandler();
 
-        console.log('Python process spawned with PID:', pythonProcess.pid);
+    pythonProcess.stderr?.on('data', (data) => {
+        console.error(`Backend stderr: ${data}`);
+    });
 
-        // Set up response handler for stdout
-        setupPythonResponseHandler();
+    pythonProcess.on('error', (error) => {
+        console.error('Failed to start backend process:', error);
+    });
 
-        if (pythonProcess.stderr) {
-            pythonProcess.stderr.on('data', (data) => {
-                const errorMsg = data.toString();
-                console.error('Python stderr:', errorMsg);
+    pythonProcess.on('exit', (code, signal) => {
+        console.log(`Backend process exited with code ${code}, signal ${signal}`);
+        pythonProcess = null;
+    });
 
-                // Check for common errors
-                if (errorMsg.includes('ModuleNotFoundError')) {
-                    console.error('Missing Python module. Run: cd backend && pip install -r requirements.txt');
-                } else if (errorMsg.includes('SyntaxError')) {
-                    console.error('Python syntax error in backend code');
-                }
-            });
+    setTimeout(() => {
+        if (pythonProcess?.pid) {
+            console.log('Backend started successfully.');
+        } else {
+            console.error('Backend failed to start in a timely manner.');
         }
-
-        pythonProcess.on('error', (error) => {
-            console.error('Failed to start Python process:', error);
-            console.error('Make sure python3 is installed and in PATH');
-        });
-
-        pythonProcess.on('exit', (code, signal) => {
-            console.log(`Python process exited with code ${code}, signal ${signal}`);
-            if (code !== 0 && code !== null) {
-                console.error('Python process crashed!');
-            }
-            pythonProcess = null;
-        });
-
-        // Give Python some time to start
-        setTimeout(() => {
-            if (pythonProcess && pythonProcess.pid) {
-                console.log('Python backend started successfully');
-            } else {
-                console.error('Python backend failed to start');
-            }
-        }, 1000);
-
-    } catch (error) {
-        console.error('Exception while starting Python:', error);
-    }
+    }, 1500);
 }
 
 // Queue to handle pending requests
@@ -309,7 +304,7 @@ function createWindow() {
         });
     } else {
         // Production mode: load from built files
-        mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));
+        mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
     }
 
     mainWindow.on('closed', () => {
