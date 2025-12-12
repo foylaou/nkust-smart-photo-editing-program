@@ -91,4 +91,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            artifacts/*/*
+            artifacts/*/*.exe
+            artifacts/*/*.AppImage
+            artifacts/*/*.dmg
+            artifacts/*/*.blockmap
