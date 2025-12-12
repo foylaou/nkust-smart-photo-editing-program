@@ -29,7 +29,7 @@ jobs:
 
       - name: Build backend executable
         working-directory: ./backend
-        run: pyinstaller --name ipc_server --onefile --noconsole ipc_server.py
+        run: pyinstaller --clean -y ipc_server.spec
 
       # --- Frontend Build Steps ---
       - name: Set up Node.js

@@ -92,8 +92,7 @@ function startPythonBackend() {
         });
     } else {
         // --- PRODUCTION MODE ---
-        const backendName = process.platform === 'win32' ? 'ipc_server.exe' : 'ipc_server';
-        const backendPath = path.join(process.resourcesPath, 'backend', backendName);
+        const backendPath = path.join(process.resourcesPath, 'backend', 'ipc_server');
         console.log('Starting Python backend in PROD mode:', backendPath);
 
         if (!existsSync(backendPath)) {
@@ -101,7 +100,7 @@ function startPythonBackend() {
             return;
         }
         
-        // In production, the backend is a self-contained executable
+        // In production, run the PyInstaller-built executable directly
         pythonProcess = spawn(backendPath, [], {
             stdio: ['pipe', 'pipe', 'pipe'],
         });

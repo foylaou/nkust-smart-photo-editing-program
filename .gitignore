@@ -4,3 +4,6 @@
 /.idea/
 /frontend/release/
 /frontend/dist/
+/backend/build/
+/backend/ipc_server.spec
+/backend/dist/
