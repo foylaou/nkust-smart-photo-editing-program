@@ -1,7 +1,7 @@
 {
   "name": "nkust-smart-photo-editing-program",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "修圖程式",
   "author": "NKUST Electronic Engineering - AI Security Group - Foy",
   "main": "dist-electron/main.js",

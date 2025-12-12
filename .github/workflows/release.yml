@@ -90,6 +90,7 @@ jobs:
           body: "New cross-platform release v${{ steps.package_version.outputs.version }}"
           draft: false
           prerelease: false
+          overwrite: true
           files: |
             artifacts/*/*.exe
             artifacts/*/*.AppImage
