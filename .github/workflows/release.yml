@@ -5,8 +5,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-release:
-    runs-on: ubuntu-latest
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,11 +41,41 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
-      - name: Build frontend and package application
+      - name: Build and package for Linux
+        if: matrix.os == 'ubuntu-latest'
         working-directory: ./frontend
-        run: npm run build:all
+        run: npm run build:linux
 
-      # --- Release Steps ---
+      - name: Build and package for Windows
+        if: matrix.os == 'windows-latest'
+        working-directory: ./frontend
+        run: npm run build:win
+
+      - name: Build and package for macOS
+        if: matrix.os == 'macos-latest'
+        working-directory: ./frontend
+        run: npm run build:mac
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts-${{ matrix.os }}
+          path: frontend/release/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
       - name: Get package version
         id: package_version
         working-directory: ./frontend
@@ -54,10 +87,8 @@ jobs:
         with:
           tag_name: v${{ steps.package_version.outputs.version }}
           name: Release v${{ steps.package_version.outputs.version }}
-          body: |
-            New release v${{ steps.package_version.outputs.version }}
-            Includes updated frontend and backend.
+          body: "New cross-platform release v${{ steps.package_version.outputs.version }}"
           draft: false
           prerelease: false
           files: |
-            frontend/release/*
+            artifacts/*/*
